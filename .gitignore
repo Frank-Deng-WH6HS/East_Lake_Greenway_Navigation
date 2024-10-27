@@ -1,3 +1,10 @@
 
+*.bak
+
+*-checkpoint.ipynb
+
 /Data_ELGW
 /Material
+
+/Requirement_Invest/*/*.pdf
+/Requirement_Invest/*/*.jpg
