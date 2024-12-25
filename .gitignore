@@ -8,3 +8,4 @@
 
 /Requirement_Invest/*/*.pdf
 /Requirement_Invest/*/*.jpg
+*.pyc
