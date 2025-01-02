@@ -2,9 +2,19 @@
 *.bak
 
 *-checkpoint.ipynb
+*-checkpoint.py
+*-checkpoint.txt
 
-/Data_ELGW
+/Geodata_ELGW
 /Material
+
+/Feasibility/*/*.shp*
+/Feasibility/*/*.shx
+/Feasibility/*/*.dbf
+/Feasibility/*/*.prj
+/Feasibility/*/*.sbn
+/Feasibility/*/*.sbx
+/Feasibility/*/*.cpg
 
 /Requirement_Invest/*/*.pdf
 /Requirement_Invest/*/*.jpg
