@@ -2,7 +2,7 @@
 
 #作者: Frank-Deng-WH6HS <enter_the_dragon@foxmail.com>
 
-#引用的开源代码库项目: 
+#引用的第三方python开源代码库项目: 
 #   pyproj - MIT License
 #   shapely - BSD License
 
