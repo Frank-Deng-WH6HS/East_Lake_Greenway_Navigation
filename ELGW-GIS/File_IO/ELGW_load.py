@@ -7,7 +7,7 @@
 #   shapely - BSD License
 
 #操作目录和文件
-import os; __script_dir__ = os.path.dirname(__file__); 
+import sys, os; __script_dir = os.path.dirname(__file__); 
 #导入shp
 import shapefile as shpf; 
 #处理几何信息
@@ -17,6 +17,8 @@ import shapely.ops as shplops;
 #操作数组
 import numpy as np; 
 from functools import reduce; 
+#对象副本创建(防止重投影过程修改已创建的实例)
+import copy
 
 #按照下标对list或者tuple进行切分
 def partition_indexed(ls: list or tuple, idx_prtn: list or tuple) -> tuple: 
@@ -94,12 +96,15 @@ class AttributiveGeometry():
         self.attribute = shpf_obj_prop
         #完成读取后关闭文件, 解除占用. 
         shpf_obj.close(); 
-
-
+        
+    #强制建立对象副本
+    def copy(self): 
+        return(copy.deepcopy(self))
+        
 #从ESRI Shapefile文件中导入东湖绿道部分路段路网
 def elgw_scenic_path_load(): 
     elgw_filepath = os.sep.join([
-        __script_dir__, os.pardir, "Data_Built-in", "ELGW_Path", 
+        __script_dir, os.pardir, "Data_Built-in", "ELGW_Path", 
         "ELGW_Main_2D_EPSG_32649.shp"
     ]); 
     return(AttributiveGeometry(elgw_filepath)); 
