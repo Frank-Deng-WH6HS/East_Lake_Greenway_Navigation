@@ -50,7 +50,7 @@ class RGBColor():
     #获取或修改颜色值(由红, 绿, 蓝三色强度组成的三元组)
     @property
     def rgb(self): 
-        return self.__rgb; 
+        return(self.__rgb); 
     @rgb.setter
     def rgb(self, band_arr): 
         self.__init__(rgb = band_arr); 
@@ -58,7 +58,7 @@ class RGBColor():
     #获取颜色的HTML文本
     @property
     def html_color(self): 
-        return "#" + bytes(self.__rgb).hex(); 
+        return("#" + bytes(self.__rgb).hex()); 
 
 #为绘制的shapely图形指定执行重绘任务的地图缩放级别范围, 以及符号系统, 形成一个对象
 class RedrawableGeometry(): 
@@ -74,38 +74,58 @@ class RedrawableGeometry():
     ): 
         if type(shape) is ELGW_Load.AttributiveGeometry: 
             #d导入几何和属性信息
-            self.shapeTypeName = shape.shapeTypeName; 
             self.geometry = shape.geometry; 
             self.attribute = shape.attribute; #预留, 后期拟定用于在点击图形后提示部分属性
-            #处理非法的缩放级别, 确保 1 ≤ 最小缩放级别 ≤ 最大缩放级别 ≤ 19
-            if min_zoom == None: 
-                 min_zoom = RedrawableGeometry.LOWERMOST_ZOOM; 
-            if max_zoom == None: 
-                max_zoom = RedrawableGeometry.UPPERMOST_ZOOM
-            if border_color == None: 
-                border_color = RedrawableGeometry.BORDER_COLOR_DEFAULT; 
-            if border_width == None: 
-                border_width = RedrawableGeometry.BORDER_WIDTH_DEFAULT; 
-            self.__min_zoom = max(
-                RedrawableGeometry.LOWERMOST_ZOOM, 
-                int(min_zoom)
-            ); 
-            self.__max_zoom = min(
-                RedrawableGeometry.UPPERMOST_ZOOM, 
-                int(max_zoom)
-            ); 
-            self.__max_zoom = max(self.__max_zoom, self.__min_zoom); 
-            self.__border_color = border_color; 
-            #处理非法的线宽, 确保 1 ≤ 线宽  
-            self.__border_width = max(border_width, 1); 
+        elif isinstance(shape, shplgeo.base.BaseGeometry): 
+            #只能导入几何信息, 属性为空
+            self.geometry = shape; 
+            self.attribute = dict(); 
         else: 
             return TypeError; 
+        self.__is_visible = True; 
+        #处理非法的缩放级别, 确保 1 ≤ 最小缩放级别 ≤ 最大缩放级别 ≤ 19
+        if min_zoom == None: 
+             min_zoom = RedrawableGeometry.LOWERMOST_ZOOM; 
+        if max_zoom == None: 
+            max_zoom = RedrawableGeometry.UPPERMOST_ZOOM
+        if border_color == None: 
+            border_color = RedrawableGeometry.BORDER_COLOR_DEFAULT; 
+        if border_width == None: 
+            border_width = RedrawableGeometry.BORDER_WIDTH_DEFAULT; 
+        self.__min_zoom = max(
+            RedrawableGeometry.LOWERMOST_ZOOM, 
+            int(min_zoom)
+        ); 
+        self.__max_zoom = min(
+            RedrawableGeometry.UPPERMOST_ZOOM, 
+            int(max_zoom)
+        ); 
+        self.__max_zoom = max(self.__max_zoom, self.__min_zoom); 
+        self.__border_color = border_color; 
+        #处理非法的线宽, 确保 1 ≤ 线宽  
+        self.__border_width = max(border_width, 1); 
+
+    #设置图形在地图查看器上的可见性(仍受缩放级别的制约)
+    @property
+    def visible(self): 
+        return(self.__is_visible); 
+    @visible.setter
+    def visible(self, vis): 
+        if type(vis) is bool: 
+            self.__is_visible = vis;
+        else: 
+            raise TypeError; 
+    
+    def show(self): 
+        self.__is_visible = True; 
+    def hide(self): 
+        self.__is_visible = False; 
         
     #定义图形在地图查看器上显示时的最小, 最大缩放级别属性
     #最小缩放级别
     @property
     def min_zoom(self): 
-        return self.__min_zoom; 
+        return(self.__min_zoom); 
     @min_zoom.setter
     def min_zoom(self, zoom_lvl): 
         self.__min_zoom = min(
@@ -116,7 +136,7 @@ class RedrawableGeometry():
     #最大缩放级别
     @property
     def max_zoom(self): 
-        return self.__max_zoom; 
+        return(self.__max_zoom); 
     @max_zoom.setter
     def max_zoom(self, zoom_lvl): 
         self.__max_zoom = max(
@@ -128,7 +148,7 @@ class RedrawableGeometry():
     #边界颜色(点, 线的颜色)
     @property
     def border_color(self): 
-        return self.__border_color; 
+        return(self.__border_color); 
     @border_color.setter
     def border_color(self, color): 
         self.__border_color = color; 
@@ -136,7 +156,7 @@ class RedrawableGeometry():
     #边界宽度(点的大小或线的粗细)
     @property
     def border_width(self): 
-        return self.__border_width; 
+        return(self.__border_width); 
     @border_width.setter
     def border_width(self, wdt): 
         self.__border_width = max(wdt, 1); 
@@ -155,7 +175,7 @@ class TkMapViewRedrawable(tkmvw.map_widget.TkinterMapView):
     #定义查看器"窗口中心点经纬度"属性
     @property
     def position(self): 
-        return self.get_position(); 
+        return(self.get_position()); 
     @position.setter
     def position(self, pos_new): 
         self.set_position(pos_new); 
@@ -176,10 +196,19 @@ class TkMapViewRedrawable(tkmvw.map_widget.TkinterMapView):
         #计算地图界面当前的显示范围
         xmin, ymin, xmax, ymax = self.boundary_latlon(); 
         for layer in self.layers: 
-            #使用地图当前的显示范围对路段进行裁剪
+            #只有当地图查看器的缩放级别位于当前图层的缩放级别范围内时, 才重绘图层, 否则跳过图层
+            if not layer.visible: 
+                continue; 
+            if self.zoom < layer.min_zoom or self.zoom > layer.max_zoom: 
+                continue; 
+            #使用地图查看器当前的显示范围对路段进行裁剪
             geoms_clipped = shplops.clip_by_rect(
                 layer.geometry, xmin, ymin, xmax, ymax
-            ); 
+            );
+            if isinstance(geoms_clipped, shplgeo.linestring.LineString): 
+                geoms_clipped = shplgeo.MultiLineString([geoms_clipped]); 
+            elif isinstance(geoms_clipped, shplgeo.point.Point): 
+                geoms_clipped = shplgeo.MultiPoint([geoms_clipped]); 
             #将裁剪后的每一部分绘制在地图界面上
             if type(geoms_clipped) is shplgeo.multilinestring.MultiLineString: 
                 for part in geoms_clipped: 
