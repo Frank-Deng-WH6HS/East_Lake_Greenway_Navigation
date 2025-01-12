@@ -20,12 +20,12 @@ import pyproj;
 #正向变换公式
 __wgs_to_utm349__ = pyproj.Transformer.from_crs( 
     "EPSG:4326", #WGS 1984 Geodesic
-    'EPSG:32650', #WGS 1984 / UTM 3° Zone 49
+    'EPSG:32649', #WGS 1984 / UTM 3° Zone 49
 ).transform; 
 
 #逆向变换公式
 __utm349_to_wgs__ = pyproj.Transformer.from_crs( 
-    'EPSG:32650', #WGS 1984 / UTM 3° Zone 49
+    'EPSG:32649', #WGS 1984 / UTM 3° Zone 49
     "EPSG:4326", #WGS 1984 Geodesic
 ).transform; 
 
