@@ -161,8 +161,10 @@ class RedrawableGeometry():
     def border_width(self, wdt): 
         self.__border_width = max(wdt, 1); 
 
-#定义改良的mapview查看器, 使之支持重绘功能
+#定义改良的mapview查看器, 使之支持重绘和图层管理功能
 #重绘的目的是让查看器只绘制窗口范围内可见的矢量图形, 减少用户在平移地图时的延迟卡顿
+#与leaflet.js / folium不同, 原版的mapview不支持图层管理
+#图层管理需要实现图层添加, 删除, 叠放次序移动, 显隐性切换等功能, 与重绘功能配合使用
 class TkMapViewRedrawable(tkmvw.map_widget.TkinterMapView): 
     
     def __init__(self, window, width: int = 800, height: int = 600): 
@@ -170,7 +172,10 @@ class TkMapViewRedrawable(tkmvw.map_widget.TkinterMapView):
         #禁用联网加载底图瓦片服务(将网址设置为"空白页")
         #警告! OpenStreetMap中的部分制图要素, 不符合中国现行法律法规
         self.set_tile_server("about:blank"); 
-        self.layers = []; 
+        #图层管理(图层的内容从下到上绘制)
+        self.layer_clear(); 
+        #__layers是一个list, 其中的每个元素都是二元组(名称, 图层内容), 以便转化为dict, 
+        #从而通过图层名称进行索引(预留功能, 当前版本仍通过遍历方法索引)
         
     #定义查看器"窗口中心点经纬度"属性
     @property
@@ -179,6 +184,55 @@ class TkMapViewRedrawable(tkmvw.map_widget.TkinterMapView):
     @position.setter
     def position(self, pos_new): 
         self.set_position(pos_new); 
+        
+    #图层管理
+    #查看每个图层的名称和叠放次序
+    @property
+    def layers(self): 
+        return(self.__layers); 
+        
+    #添加新的图层, 并使其显示在最上层
+    def layer_append(self, layer_name: str, layer: RedrawableGeometry): 
+        #新图层不得与现有的任一图层重名, 否则报错
+        if layer_name in dict(self.layers).keys(): 
+            raise LookupError(f'Layer "{layer_name}" already exists. '); 
+        self.__layers.append((layer_name, layer, )); 
+
+    #根据图层名称查找其叠放顺序(从最底层开始)
+    def layer_index(self, layer_name: str): 
+        for idx, lyr in enumerate(self.__layers): 
+            if layer_name == lyr[0]: 
+                return(idx); 
+        #如果没有上述名称的图层, 则报错. 
+        raise LookupError(f'Layer "{layer_name}" does not exist. ')
+    
+    #删除特定图层
+    def layer_remove(self, layer_name): 
+        idx = self.layer_index(layer_name); 
+        del self.__layers[idx]; 
+    
+    #删除全部图层
+    def layer_clear(self): 
+        self.__layers = []; 
+    
+    #切换特定图层的显隐性(但不重绘)
+    def layer_show(self, layer_name): 
+        idx = self.layer_index(layer_name); 
+        self.__layers[idx][1].show(); 
+        
+    def layer_hide(self, layer_name): 
+        idx = self.layer_index(layer_name); 
+        self.__layers[idx][1].hide(); 
+    
+    #调整特定图层的Z顺序(预留)
+    def layer_zorder(self, layer_name, order): 
+        #Z顺序从下往上递增, 最底层为0, 最顶层为len(__layers)-1
+        if order >= len(self.__layer) or order <= -len(self.__layer) - 1: 
+            raise IndexError; 
+        idx = self.layer_index(layer_name); 
+        layer = self.__layers[idx][1]; 
+        del self.__layers[idx]; 
+        self.__layers.insert(order, (layer_name, layer, ))
         
     #绘图区域边界的经纬度("四至点经纬度", 不能直接更改)
     #返回结果为四元组: (最西端经度, 最南端纬度, 最东端经度, 最北端纬度)    
@@ -190,12 +244,12 @@ class TkMapViewRedrawable(tkmvw.map_widget.TkinterMapView):
         return(xmin, ymin, xmax, ymax); 
         
     #重绘功能
-    def redraw_annotation(self, event): 
+    def redraw_annotation(self, event=None): 
         #擦除原来绘制的内容
         self.delete_all_path(); 
         #计算地图界面当前的显示范围
         xmin, ymin, xmax, ymax = self.boundary_latlon(); 
-        for layer in self.layers: 
+        for name, layer in self.__layers: 
             #只有当地图查看器的缩放级别位于当前图层的缩放级别范围内时, 才重绘图层, 否则跳过图层
             if not layer.visible: 
                 continue; 
