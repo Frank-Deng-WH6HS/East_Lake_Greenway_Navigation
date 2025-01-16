@@ -17,6 +17,8 @@ from functools import partial;
 #用户界面
 import tkinter as tk; 
 import tkintermapview as tkmvw; 
+#数学计算
+import math; 
 
 #导入工程目录下的自定义类
 __repo_root = os.path.abspath(os.sep.join([__script_dir, os.pardir])); 
@@ -268,14 +270,37 @@ class TkMapViewRedrawable(tkmvw.map_widget.TkinterMapView):
                 for part in geoms_clipped: 
                     x_list, y_list = part.coords.xy; 
                     self.set_path(
-                        list(zip(tuple(y_list), tuple(x_list))), 
+                        tuple(zip(tuple(y_list), tuple(x_list))), 
                         color=layer.border_color.html_color, 
                         width=layer.border_width
                     ); 
             elif type(geoms_clipped) is shplgeo.multipoint.MultiPoint: 
                 for part in geoms_clipped: 
                     x_list, y_list = part.xy; 
-                    self.set_path(((y_list, x_list)) * 2, 
+                    self.set_path(
+                        tuple(zip(tuple(y_list), tuple(x_list))) * 2, 
                         color=layer.border_color.html_color, 
                         width=layer.border_width
                     ); 
+    
+    #重写mouse_zoom方法
+    def mouse_zoom(self, event):
+        # mouse pointer position on map (x=[0..1], y=[0..1])
+        relative_mouse_x = event.x / self.width  
+        relative_mouse_y = event.y / self.height
+
+        if sys.platform == "darwin":
+            new_zoom = self.zoom + math.copysign(1, event.delta)
+        elif sys.platform.startswith("win"):
+            new_zoom = self.zoom + math.copysign(1, event.delta)
+        elif event.num == 4:
+            new_zoom = self.zoom + 1
+        elif event.num == 5:
+            new_zoom = self.zoom - 1
+        else:
+            new_zoom = self.zoom + math.copysign(1, event.delta)
+
+        self.set_zoom(new_zoom, 
+            relative_pointer_x=relative_mouse_x, 
+            relative_pointer_y=relative_mouse_y
+        )
