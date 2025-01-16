@@ -22,6 +22,8 @@ import copy
 
 #按照下标对list或者tuple进行切分
 def partition_indexed(ls: list or tuple, idx_prtn: list or tuple) -> tuple: 
+    if len(idx_prtn) == 0: 
+        return(ls); 
     idx_prtn_tail = list(idx_prtn[1: ]); 
     idx_prtn_tail.append(None); 
     ls_prtn = tuple(tuple(ls[idx_head: idx_tail]) 
